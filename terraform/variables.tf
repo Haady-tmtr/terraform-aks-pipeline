@@ -1,11 +1,11 @@
 variable "project_name" {
-    type = string
-    default = "terraform-aks-pipeline"
+  type    = string
+  default = "terraform-aks-pipeline"
 }
 
 variable "location" {
-  type = string
-  default     = "West Europe"
+  type    = string
+  default = "swedencentral"
 }
 
 variable "node_count" {
@@ -15,6 +15,6 @@ variable "node_count" {
 
 variable "node_vm_size" {
   type    = string
-  default = "Standard_D2s_v3"
+  default = "standard_b2as_v2"
 }
 
