@@ -1,0 +1,38 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write  # Nécessaire pour OIDC
+  contents: read   # Pour checkout
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Azure Login (OIDC, sans secret)
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR Login
+        run: az acr login --name terraformakspipelineacr
+
+      - name: Build & Push Image
+        run: |
+          docker build -t terraformakspipelineacr.azurecr.io/terraform-aks-pipeline-app:${{ github.sha }} ./app
+          docker push terraformakspipelineacr.azurecr.io/terraform-aks-pipeline-app:${{ github.sha }}
+
+      - name: Get AKS Credentials
+        run: az aks get-credentials --resource-group terraform-aks-pipeline-rg --name terraform-aks-pipeline-aks --overwrite-existing
+
+      - name: Deploy to AKS
+        run: |
+          kubectl set image deployment/terraform-aks-pipeline-app app=terraformakspipelineacr.azurecr.io/terraform-aks-pipeline-app:${{ github.sha }}
+          kubectl rollout status deployment/terraform-aks-pipeline-app
