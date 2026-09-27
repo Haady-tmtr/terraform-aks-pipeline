@@ -37,3 +37,26 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   scope                            = azurerm_container_registry.acr.id
   skip_service_principal_aad_check = true
 }
+
+
+# Managed Identity pour l'authentification GitHub Actions (OIDC)
+resource "azurerm_user_assigned_identity" "github_actions" {
+  name                = "${var.project_name}-github-mi"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+}
+
+resource "azurerm_role_assignment" "github_actions_contributor" {
+  principal_id         = azurerm_user_assigned_identity.github_actions.principal_id
+  role_definition_name = "Contributor"
+  scope                = azurerm_resource_group.main.id
+}
+
+resource "azurerm_federated_identity_credential" "github_actions" {
+  name                = "github-actions-${var.project_name}"
+  resource_group_name = azurerm_resource_group.main.name
+  parent_id           = azurerm_user_assigned_identity.github_actions.id
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = "https://token.actions.githubusercontent.com"
+  subject             = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:ref:refs/heads/main"
+}

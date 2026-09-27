@@ -9,3 +9,7 @@ output "aks_cluster_name" {
 output "acr_login_server" {
   value = azurerm_container_registry.acr.login_server
 }
+
+output "github_actions_client_id" {
+  value = azurerm_user_assigned_identity.github_actions.client_id
+}

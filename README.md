@@ -150,43 +150,39 @@ passe par une **Managed Identity** avec un lien de confiance fédéré (Workload
 Federation), qui échange un token OIDC signé par GitHub contre un token d'accès Azure à
 chaque exécution.
 
-### Mise en place de l'authentification OIDC
 
-**1. Créer une Managed Identity dédiée**
-```bash
-az identity create --resource-group terraform-aks-pipeline-rg --name terraform-aks-pipeline-github-mi
-```
+### Authentification OIDC (Managed Identity gérée par Terraform)
 
-**2. Récupérer son `clientId` et `principalId`**
-```bash
-az identity show --resource-group terraform-aks-pipeline-rg --name terraform-aks-pipeline-github-mi \
-  --query "{clientId:clientId, principalId:principalId}" -o json
-```
+La Managed Identity, son rôle Contributor, et le lien de confiance fédéré (federated
+credential) vers GitHub Actions sont entièrement provisionnés par Terraform - pas de
+commande `az` manuelle à lancer pour cette partie.
 
-**3. Lui attribuer le rôle Contributor sur le resource group**
-```bash
-az role assignment create \
-  --assignee <principalId> \
-  --role Contributor \
-  --scope /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/terraform-aks-pipeline-rg
-```
 
-**4. Récupérer les identifiants immuables de votre repo GitHub**
+**1. Récupérer les identifiants immuables de votre repo GitHub**
 
 ```bash
 curl -s https://api.github.com/repos/<TON_ORG>/<TON_REPO> | jq '{owner_id: .owner.id, repo_id: .id}'
 ```
 
-**5. Créer le lien de confiance fédéré**
-```bash
-az identity federated-credential create \
-  --name "github-actions-terraform-aks-pipeline" \
-  --identity-name terraform-aks-pipeline-github-mi \
-  --resource-group terraform-aks-pipeline-rg \
-  --issuer "https://token.actions.githubusercontent.com" \
-  --subject "repo:<TON_ORG>@<owner_id>/<TON_REPO>@<repo_id>:ref:refs/heads/main" \
-  --audiences "api://AzureADTokenExchange"
+**2. Renseigner ces valeurs dans `terraform/variables.tf`** (ou via `-var` au moment du
+`terraform apply`)
+
+```hcl
+variable "github_owner"    { default = "<TON_ORG>" }
+variable "github_owner_id" { default = "<owner_id>" }
+variable "github_repo"     { default = "<TON_REPO>" }
+variable "github_repo_id"  { default = "<repo_id>" }
 ```
+
+
+3. Appliquer la configuration
+```bash
+terraform apply
+
+## Récuperer le client_id généré
+terraform output github_actions_client_id
+```
+
 
 ### Secrets GitHub à configurer
 
@@ -194,7 +190,7 @@ Sur votre repo : `Settings` → `Secrets and variables` → `Actions` :
 
 | Secret | Valeur |
 |---|---|
-| `AZURE_CLIENT_ID` | `clientId` de la Managed Identity (étape 2) |
+| `AZURE_CLIENT_ID` | Sortie de `terraform output github_actions_client_id` (étape 3) |
 | `AZURE_TENANT_ID` | Votre Tenant ID Azure |
 | `AZURE_SUBSCRIPTION_ID` | Votre Subscription ID Azure |
 
