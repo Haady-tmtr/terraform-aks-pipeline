@@ -241,16 +241,6 @@ kubectl scale deployment terraform-aks-pipeline-app --replicas=3
 cd terraform && terraform destroy
 ```
 
-> La Managed-identity ayant été créee à la main, le `terraform destroy` peut refuser de détruire cette ressource à l'intérieur du resource-group. Donc détruire cette identité managée avant de relancer le destroy : 
-
-```bash
-# Destruction de la managed-identity
-- az identity delete --resource-group terraform-aks-pipeline-rg --name terraform-aks-pipeline-github-mi
-
-# Destruction finale de l'infrastructure
-- terraform destroy -auto-approve
-```
-
 ---
 
 ## Points techniques notables
